@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck: # <<< THÊM HEALTHCHECK CHO POSTGRES
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   auth-service:
     image: node:18
@@ -18,7 +23,12 @@ services:
     working_dir: /app
     volumes:
       - ./services/auth-service:/app
-    command: sh -c "npm install && npm run start"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+    command: sh -c "npm install && npm run build && npx prisma migrate deploy && npm run start"
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3001:3001"
   order-service:
@@ -27,7 +37,12 @@ services:
     working_dir: /app
     volumes:
       - ./services/order-service:/app
-    command: sh -c "npm install && npm run start"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+    command: sh -c "npm install && npm run build && npx prisma migrate deploy && npm run start"
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3002:3002"
   user-service:
@@ -36,7 +51,12 @@ services:
     working_dir: /app
     volumes:
       - ./services/user-service:/app
-    command: sh -c "npm install && npm run start"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+    command: sh -c "npm install && npm run build && npx prisma migrate deploy && npm run start"
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3003:3003"
   gateway:
@@ -45,7 +65,11 @@ services:
     working_dir: /app
     volumes:
       - ./gateway:/app
-    command: sh -c "npm install && npm run start"
+    command: sh -c "npm install && npm run build && npm run start"
+    depends_on:
+      - auth-service
+      - order-service
+      - user-service
     ports:
       - "3000:3000"
 
