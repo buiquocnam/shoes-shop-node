@@ -32,4 +32,15 @@ export const register = async (req, res) => {
         res.status(500).json({ error: message });
     }
 };
+
+export const logout = async (req, res) => {
+    try {
+        // Invalidate token logic here (if using token blacklist)
+        res.json({ message: 'Logged out successfully' });
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res.status(500).json({ error: message });
+    }
+};
 export default login;

@@ -1,25 +1,108 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ===========================================
+// PRISMA SCHEMA CHO USER SERVICE
+// Database: PostgreSQL
+// ===========================================
 
 generator client {
   provider = "prisma-client-js"
 }
 
+// Đảm bảo DATABASE_URL trong .env là PostgreSQL
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  name     String?
-  avatar   String?
-  phone    String?
-  address  String?
-  role     String  @default("customer")  // customer, admin, seller
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ===========================================
+// ⚠️ EXTERNAL REFERENCES (Tham chiếu ngoài - KHÔNG TẠO BẢNG)
+// ===========================================
 
-  @@map("users")
+// User: Lấy ID từ Auth Service (Bảng 'users' đã được tạo bởi Auth Service)
+model User {
+  id      String @id @default(uuid()) @db.Uuid // Phải khớp với kiểu ID trong Auth Service
+  
+  // Quan hệ ngược
+  cart    Cart[]
+  reviews Review[]
+  
+  @@map("users") 
+}
+
+// Product Variant: Lấy ID từ Product Service (Bảng 'product_variants' đã được tạo bởi Product Service)
+model ProductVariant {
+  id    String @id @default(uuid()) @db.Uuid // Phải khớp với kiểu ID trong Product Service
+  
+  // Quan hệ ngược
+  cart_items CartItem[]
+  
+  @@map("product_variants") 
+}
+
+
+// ===========================================
+// 🛒 USER SERVICE OWNED COLLECTIONS
+// ===========================================
+
+// 1. CARTS (Giỏ hàng)
+model Cart {
+  id          String    @id @default(uuid()) @db.Uuid
+  user_id     String    @db.Uuid // Khóa ngoại tới User
+  
+  // Mối quan hệ: User (Auth Service)
+  user        User      @relation(fields: [user_id], references: [id])
+
+  // Mối quan hệ: Cart Items
+  cart_items  CartItem[]
+
+  created_at  DateTime  @default(now()) @map("created_at")
+
+  @@map("carts")
+}
+
+// 2. CART ITEMS (Chi tiết sản phẩm trong giỏ)
+model CartItem {
+  id                  String  @id @default(uuid()) @db.Uuid
+  cart_id             String  @db.Uuid
+  product_variant_id  String  @db.Uuid // Khóa ngoại tới Product Variant
+  quantity            Int     @default(1)
+
+  // Mối quan hệ: Cart
+  cart                Cart            @relation(fields: [cart_id], references: [id])
+  
+  // Mối quan hệ: Product Variant (Product Service)
+  product_variant     ProductVariant  @relation(fields: [product_variant_id], references: [id])
+
+  // Đảm bảo không có hai cùng một biến thể trong cùng một giỏ hàng
+  @@unique([cart_id, product_variant_id], name: "cart_item_unique")
+  @@map("cart_items")
+}
+
+
+// 3. REVIEWS (Đánh giá)
+model Review {
+  id          String    @id @default(uuid()) @db.Uuid
+  product_id  String    @db.Uuid // ID Sản phẩm (từ Product Service)
+  user_id     String    @db.Uuid // ID Người dùng (từ Auth Service)
+  rating      Int       @default(5) // 1 đến 5
+  comment     String?
+  
+  // Mối quan hệ: User
+  user        User      @relation(fields: [user_id], references: [id])
+
+  created_at  DateTime  @default(now()) @map("created_at")
+
+  @@map("reviews")
+}
+
+// 4. BANNERS (Quảng cáo)
+model Banner {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String?
+  image_url   String
+  link        String?
+  active      Boolean   @default(true)
+
+  created_at  DateTime  @default(now()) @map("created_at")
+
+  @@map("banners")
 }

@@ -26,6 +26,12 @@ app.use('/users', createProxyMiddleware({
   pathRewrite: { '^/users': '' } 
 }));
 
+app.use('/products', createProxyMiddleware({
+  target: 'http://product-service:3004',
+  changeOrigin: true,
+  pathRewrite: { '^/products': '' }
+}));
+
 app.listen(3000, () => {
   console.log('Gateway listening on http://localhost:3000');
 });

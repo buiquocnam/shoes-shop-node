@@ -59,6 +59,21 @@ services:
         condition: service_healthy
     ports:
       - "3003:3003"
+  product-service:
+    image: node:18
+    container_name: product-service
+    working_dir: /app
+    volumes:
+      # Giả sử thư mục code là ./services/product-service
+      - ./services/product-service:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+    command: sh -c "npm install && npm run build && npx prisma migrate deploy && npm run start"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3004:3004" # Chạy trên cổng 3004
   gateway:
     image: node:18
     container_name: gateway
