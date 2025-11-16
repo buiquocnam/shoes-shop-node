@@ -1,5 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ===========================================
+// PRISMA SCHEMA CHO ORDER SERVICE
+// Database: PostgreSQL (Sử dụng UUID cho ID)
+// ===========================================
 
 generator client {
   provider = "prisma-client-js"
@@ -10,27 +12,147 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Order {
-  id    Int     @id @default(autoincrement())
-  userId Int
-  status String @default("pending")  // pending, completed, cancelled
-  totalPrice Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ===========================================
+// ⚠️ EXTERNAL REFERENCES (Tham chiếu ngoài - KHÔNG TẠO BẢNG)
+// ===========================================
 
-  items OrderItem[]
+// User: Lấy ID từ Auth Service
+model User {
+  id      String @id @default(uuid()) @db.Uuid
+  orders  Order[] // Quan hệ ngược (Optional)
+  
+  @@map("users") 
+}
+
+// Product Variant: Lấy ID từ Product Service
+model ProductVariant {
+  id          String      @id @default(uuid()) @db.Uuid
+  order_items OrderItem[] // Quan hệ ngược (Optional)
+  
+  @@map("product_variants") 
+}
+
+
+// ===========================================
+// 🛒 ORDER SERVICE OWNED COLLECTIONS
+// ===========================================
+
+// 1. ORDERS (Đơn hàng)
+model Order {
+  id               String      @id @default(uuid()) @db.Uuid
+  user_id          String      @db.Uuid
+  total_amount     Float       // Tổng tiền cuối cùng (sau khi áp dụng phí ship/giảm giá)
+  
+  // Thông tin giao hàng
+  shipping_address String
+  receiver_name    String
+  receiver_phone   String
+  tracking_code    String?     // Mã vận đơn
+
+  // Trạng thái & Phương thức
+  payment_method   PaymentMethod @default(COD)
+  payment_status   PaymentStatus @default(PENDING)
+  shipping_method  ShippingMethod @default(STANDARD)
+  shipping_fee     Float         @default(0)
+  shipping_status  ShippingStatus @default(PENDING)
+
+  // Mối quan hệ
+  user             User          @relation(fields: [user_id], references: [id])
+  order_items      OrderItem[]   // Chi tiết sản phẩm
+  payments         Payment[]     // Bản ghi thanh toán
+  shipping_logs    ShippingLog[] // Log vận chuyển
+
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
 
   @@map("orders")
 }
 
+// 2. ORDER ITEMS (Chi tiết sản phẩm trong đơn hàng)
 model OrderItem {
-  id       Int   @id @default(autoincrement())
-  orderId  Int
-  productId Int
-  quantity Int
-  price    Float
+  id                  String  @id @default(uuid()) @db.Uuid
+  order_id            String  @db.Uuid
+  product_variant_id  String  @db.Uuid 
+  quantity            Int
+  price               Float // Giá bán tại thời điểm đặt hàng (Đã bao gồm giảm giá sản phẩm nếu có)
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
+  // Mối quan hệ
+  order               Order           @relation(fields: [order_id], references: [id])
+  product_variant     ProductVariant  @relation(fields: [product_variant_id], references: [id])
+  
   @@map("order_items")
+}
+
+// 3. PAYMENTS (Giao dịch Thanh toán)
+model Payment {
+  id              String         @id @default(uuid()) @db.Uuid
+  order_id        String         @db.Uuid
+  amount          Float
+  method          PaymentMethod
+  status          PaymentStatus  @default(PENDING)
+  transaction_id  String?        // Mã giao dịch từ cổng thanh toán
+
+  // Mối quan hệ
+  order           Order          @relation(fields: [order_id], references: [id])
+  
+  created_at      DateTime       @default(now()) @map("created_at")
+
+  @@map("payments")
+}
+
+// 4. SHIPPING LOGS (Lịch sử Vận chuyển)
+model ShippingLog {
+  id              String           @id @default(uuid()) @db.Uuid
+  order_id        String           @db.Uuid
+  status          ShippingStatusLog
+  note            String?
+  
+  // Mối quan hệ
+  order           Order            @relation(fields: [order_id], references: [id])
+
+  updated_at      DateTime         @default(now()) @map("updated_at")
+  
+  @@map("shipping_logs")
+}
+
+// ===========================================
+// ENUMS (Liệt kê)
+// ===========================================
+
+enum PaymentMethod {
+  COD
+  MOMO
+  ZALOPAY
+  PAYPAL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum ShippingMethod {
+  STANDARD
+  EXPRESS
+  PICKUP
+}
+
+enum ShippingStatus {
+  PENDING
+  PROCESSING
+  SHIPPING
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+// Log chi tiết trạng thái vận chuyển
+enum ShippingStatusLog {
+  PROCESSING
+  PICKUP
+  SHIPPING
+  DELIVERED
+  FAILED
+  RETURNED
 }
