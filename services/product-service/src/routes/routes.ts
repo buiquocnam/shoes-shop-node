@@ -3,12 +3,13 @@ import {
   listProducts,
   getProduct,
   createProduct,
-  listCategories,
-  createCategory,
+  
   listBrands,
   createBrand
 } from '../controllers/productController';
 
+import {listCategories,
+  createCategory} from '../controllers/categoryController';
 const router = Router();
 
 // Products

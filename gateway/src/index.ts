@@ -20,10 +20,10 @@ app.use('/orders', createProxyMiddleware({
   pathRewrite: { '^/orders': '' } 
 }));
 
-app.use('/users', createProxyMiddleware({ 
-  target: 'http://user-service:3003', 
-  changeOrigin: true, 
-  pathRewrite: { '^/users': '' } 
+app.use('/products', createProxyMiddleware({
+  target: 'http://product-service:3004',
+  changeOrigin: true,
+  pathRewrite: { '^/products': '' }
 }));
 
 app.use('/products', createProxyMiddleware({

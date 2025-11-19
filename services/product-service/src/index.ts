@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import productRoutes from './routes/routes'
+import categoryRoutes from './routes/categoryRoutes';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -11,6 +12,8 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ status: 'product service ok' }));
 
 app.use('/', productRoutes);
+
+app.use('/categories', categoryRoutes);
 
 app.listen(PORT, () => {
   console.log(`Product service listening on http://localhost:${PORT}`);

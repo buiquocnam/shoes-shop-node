@@ -15,17 +15,40 @@ datasource db {
 
 // ===========================================
 // ⚠️ EXTERNAL REFERENCES (Tham chiếu ngoài - KHÔNG TẠO BẢNG)
+// Mục đích: Định nghĩa đầy đủ trường để cho Prisma Client biết
 // ===========================================
+
+// Role: Lấy ID từ Auth Service (Bảng 'roles' đã được tạo bởi Auth Service)
+model Role {
+  id      String @id @default(uuid()) @db.Uuid
+  name    String @unique
+
+  // Quan hệ ngược (để truy vấn user.role)
+  users   User[]
+
+  @@map("roles")
+}
 
 // User: Lấy ID từ Auth Service (Bảng 'users' đã được tạo bởi Auth Service)
 model User {
-  id      String @id @default(uuid()) @db.Uuid // Phải khớp với kiểu ID trong Auth Service
+  id        String    @id @default(uuid()) @db.Uuid // Phải khớp với kiểu ID trong Auth Service
   
-  // Quan hệ ngược
-  cart    Cart[]
-  reviews Review[]
+  // 💡 THÊM ĐẦY ĐỦ CÁC TRƯỜNG DỮ LIỆU CẦN THIẾT TỪ AUTH SERVICE 
+  email     String    @unique
+  name      String?
+  password  String // Cần có để Migration biết bảng Users có trường này
+  phone     String?
+  address   String?
   
-  @@map("users") 
+  // Mối quan hệ với Role
+  role_id   String    @db.Uuid
+  role      Role      @relation(fields: [role_id], references: [id])
+  
+  // Quan hệ ngược của User Service
+  cart      Cart[]
+  reviews   Review[]
+  
+  @@map("users")
 }
 
 // Product Variant: Lấy ID từ Product Service (Bảng 'product_variants' đã được tạo bởi Product Service)
@@ -35,7 +58,7 @@ model ProductVariant {
   // Quan hệ ngược
   cart_items CartItem[]
   
-  @@map("product_variants") 
+  @@map("product_variants")
 }
 
 
@@ -45,32 +68,32 @@ model ProductVariant {
 
 // 1. CARTS (Giỏ hàng)
 model Cart {
-  id          String    @id @default(uuid()) @db.Uuid
-  user_id     String    @db.Uuid // Khóa ngoại tới User
+  id          String     @id @default(uuid()) @db.Uuid
+  user_id     String     @db.Uuid // Khóa ngoại tới User
   
   // Mối quan hệ: User (Auth Service)
-  user        User      @relation(fields: [user_id], references: [id])
+  user        User       @relation(fields: [user_id], references: [id])
 
   // Mối quan hệ: Cart Items
   cart_items  CartItem[]
 
-  created_at  DateTime  @default(now()) @map("created_at")
+  created_at  DateTime   @default(now()) @map("created_at")
 
   @@map("carts")
 }
 
 // 2. CART ITEMS (Chi tiết sản phẩm trong giỏ)
 model CartItem {
-  id                  String  @id @default(uuid()) @db.Uuid
-  cart_id             String  @db.Uuid
-  product_variant_id  String  @db.Uuid // Khóa ngoại tới Product Variant
-  quantity            Int     @default(1)
+  id                  String           @id @default(uuid()) @db.Uuid
+  cart_id             String           @db.Uuid
+  product_variant_id  String           @db.Uuid // Khóa ngoại tới Product Variant
+  quantity            Int              @default(1)
 
   // Mối quan hệ: Cart
-  cart                Cart            @relation(fields: [cart_id], references: [id])
+  cart                Cart             @relation(fields: [cart_id], references: [id])
   
   // Mối quan hệ: Product Variant (Product Service)
-  product_variant     ProductVariant  @relation(fields: [product_variant_id], references: [id])
+  product_variant     ProductVariant   @relation(fields: [product_variant_id], references: [id])
 
   // Đảm bảo không có hai cùng một biến thể trong cùng một giỏ hàng
   @@unique([cart_id, product_variant_id], name: "cart_item_unique")
