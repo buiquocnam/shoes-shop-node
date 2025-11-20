@@ -1,115 +1,174 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+// src/services/product-service/src/controllers/product.controller.ts
 
-const prisma = new PrismaClient();
+import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../prisma'; // ← đúng đường dẫn bạn đang có
+import slugify from 'slugify';
+import jwt, { JwtPayload } from 'jsonwebtoken'; // ← sửa lỗi đỏ này
 
-// Hàm hỗ trợ tạo slug (Dùng cho cả Product và Category)
-const slugify = (text: string) => {
-    // Loại bỏ ký tự đặc biệt, chuyển thành chữ thường và thay khoảng trắng bằng dấu gạch ngang
-    return text.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+// ─────────────────────────────────────────────────────────────
+// Mở rộng Request để có user từ token (middleware verify gán req.user)
+// ─────────────────────────────────────────────────────────────
+interface AuthRequest extends Request {
+  user?: string | JwtPayload;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Middleware kiểm tra ADMIN (dùng chung)
+// ─────────────────────────────────────────────────────────────
+const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized: No token' });
+  }
+
+  const payload = typeof req.user === 'string' ? jwt.decode(req.user) : req.user;
+  const role = (payload as JwtPayload)?.role;
+
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ message: 'Forbidden: Admin role required' });
+  }
+  next();
 };
 
-// --- PRODUCT CRUD ---
+// ─────────────────────────────────────────────────────────────
+// Helper: chuẩn hóa slug
+// ─────────────────────────────────────────────────────────────
+const normalizeSlug = (text: string): string => {
+  return slugify(text, { lower: true, strict: true, trim: true });
+};
 
+// ─────────────────────────────────────────────────────────────
+// PRODUCT CONTROLLERS
+// ─────────────────────────────────────────────────────────────
 export const listProducts = async (_req: Request, res: Response) => {
-    try {
-        const products = await prisma.product.findMany({
-            include: { 
-                images: true, 
-                variants: true, 
-                brand: true, 
-                // Bao gồm cả quan hệ cha-con của category (nếu có)
-                category: { include: { parent: true } } 
-            }
-        });
-        res.json(products);
-    } catch (err) {
-        res.status(500).json({ error: (err as Error).message });
-    }
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        images: true,
+        variants: true,
+        brand: { select: { name: true } },
+        category: { include: { parent: { select: { name: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: products });
+  } catch (err: any) {
+    console.error('List products error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 export const getProduct = async (req: Request, res: Response) => {
-    try {
-        const id = Number(req.params.id);
-        const product = await prisma.product.findUnique({
-            where: { id },
-            include: { 
-                images: true, 
-                variants: true, 
-                brand: true, 
-                category: { include: { parent: true } } 
-            }
-        });
-        if (!product) return res.status(404).json({ message: 'Product not found' });
-        res.json(product);
-    } catch (err) {
-        res.status(500).json({ error: (err as Error).message });
+  try {
+    const { id } = req.params; // UUID string
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        images: true,
+        variants: true,
+        brand: { select: { id: true, name: true, logo: true } },
+        category: {
+          include: {
+            parent: { select: { id: true, name: true } },
+            children: { select: { id: true, name: true } },
+          },
+        },
+        // SỬA LỖI TẠI ĐÂY: không có relation "user" trong Review
+        reviews: {
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
+            userId: true,   // chỉ lấy userId thôi
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
+
+    res.json({ success: true, data: product });
+  } catch (err: any) {
+    console.error('Get product error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
-export const createProduct = async (req: Request, res: Response) => {
+// Chỉ ADMIN mới được tạo
+export const createProduct = async (req: AuthRequest, res: Response) => {
+  requireAdmin(req, res, async () => {
     try {
-        const { 
-            name, slug, description, price, discount, stock, status, 
-            brandId, categoryId 
-        } = req.body;
+      const { name, slug, description, price, discount, stock, status = 'active', brandId, categoryId } = req.body;
 
-        if (!name || !slug || price == null) {
-            return res.status(400).json({ message: 'Missing required fields: name, slug, price' });
-        }
+      if (!name?.trim() || !slug?.trim() || price == null) {
+        return res.status(400).json({ message: 'Thiếu name, slug hoặc price' });
+      }
 
-        const product = await prisma.product.create({
-            data: {
-                name,
-                slug: slugify(slug), // Đảm bảo slug được chuẩn hóa
-                description: description || null, // Có thể null
-                price: Number(price),
-                discount: discount ? Number(discount) : 0,
-                stock: stock ? Number(stock) : 0,
-                status: status || 'active',
-                
-                // 💡 SỬA LỖI: Sử dụng NULL thay vì UNDEFINED cho Int?
-                brandId: brandId ? Number(brandId) : null,
-                categoryId: categoryId ? Number(categoryId) : null
-            }
-        });
-        res.status(201).json(product);
+      const priceNum = Number(price);
+      if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ message: 'Price không hợp lệ' });
+
+      const product = await prisma.product.create({
+        data: {
+          name: name.trim(),
+          slug: slugify(slug, { lower: true, strict: true }),
+          description: description?.trim() || null,
+          price: priceNum,
+          discount: discount != null ? Number(discount) : null,
+          stock: stock != null ? Number(stock) : null,
+          status: status === 'inactive' ? 'inactive' : 'active',
+          brandId: brandId || null,
+          categoryId: categoryId || null,
+        },
+      });
+
+      res.status(201).json({ message: 'Tạo sản phẩm thành công!', data: product });
     } catch (err: any) {
-        if (err.code === 'P2002') {
-             return res.status(409).json({ message: 'Product slug already exists.' });
-        }
-        res.status(500).json({ error: (err as Error).message });
+      console.error(err);
+      if (err.code === 'P2002') return res.status(409).json({ message: 'Slug đã tồn tại' });
+      if (err.code === 'P2003') return res.status(400).json({ message: 'brandId hoặc categoryId sai' });
+      res.status(500).json({ message: 'Lỗi server' });
     }
+  });
 };
 
+// ─────────────────────────────────────────────────────────────
+// BRAND CONTROLLERS (chỉ ADMIN)
+// ─────────────────────────────────────────────────────────────
+export const createBrand = async (req: Request, res: Response) => {
+  try {
+    const { name, logo } = req.body;
 
-// --- BRAND CRUD ---
+    if (!name?.trim()) {
+      return res.status(400).json({ message: 'Brand name is required' });
+    }
+
+    const brand = await prisma.brand.create({
+      data: {
+        name: name.trim(),
+        logo: logo?.trim() || null,
+      },
+    });
+
+    return res.status(201).json({
+      message: 'Brand created successfully',
+      data: brand,
+    });
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({ message: 'Brand name already exists' });
+    }
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
 
 export const listBrands = async (_req: Request, res: Response) => {
-    try {
-        const brands = await prisma.brand.findMany();
-        res.json(brands);
-    } catch (err) {
-        res.status(500).json({ error: (err as Error).message });
-    }
-};
-
-export const createBrand = async (req: Request, res: Response) => {
-    try {
-        const { name, logo } = req.body;
-        if (!name) return res.status(400).json({ message: 'Missing name' });
-        
-        const brand = await prisma.brand.create({ 
-            data: { 
-                name, 
-                logo: logo || null // logo là String? nên cho phép null
-            } 
-        });
-        res.status(201).json(brand);
-    } catch (err: any) {
-        if (err.code === 'P2002') {
-             return res.status(409).json({ message: 'Brand name already exists.' });
-        }
-        res.status(500).json({ error: (err as Error).message });
-    }
+  try {
+    const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
+    res.json({ success: true, data: brands });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
 };
