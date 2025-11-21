@@ -39,8 +39,17 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
+    const isAdmin = 
+      user.role_id === '00000000-0000-0000-0000-000000000001' || 
+      user.role_id === '00000000-0000-0000-0000-000000000002';
+
     const token = jwt.sign(
-      { id: user.id, email: user.email, roleId: user.role_id },
+      {
+        userId: user.id,           // hoặc id: user.id tùy bạn
+        email: user.email,
+        roleId: user.role_id,      // giữ lại để tương thích cũ
+        role: isAdmin ? 'ADMIN' : 'CUSTOMER',  // ← CÁI NÀY LÀM NÊN TẤT CẢ!!!
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );

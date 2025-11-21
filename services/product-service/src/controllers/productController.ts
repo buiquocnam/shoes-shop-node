@@ -99,39 +99,73 @@ export const getProduct = async (req: Request, res: Response) => {
 
 // Chỉ ADMIN mới được tạo
 export const createProduct = async (req: AuthRequest, res: Response) => {
-  requireAdmin(req, res, async () => {
-    try {
-      const { name, slug, description, price, discount, stock, status = 'active', brandId, categoryId } = req.body;
+  try {
+    const { name, slug, description, price, discount, stock, status = 'active', brandId, categoryId, images, variants } = req.body;
 
-      if (!name?.trim() || !slug?.trim() || price == null) {
-        return res.status(400).json({ message: 'Thiếu name, slug hoặc price' });
-      }
-
-      const priceNum = Number(price);
-      if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ message: 'Price không hợp lệ' });
-
-      const product = await prisma.product.create({
-        data: {
-          name: name.trim(),
-          slug: slugify(slug, { lower: true, strict: true }),
-          description: description?.trim() || null,
-          price: priceNum,
-          discount: discount != null ? Number(discount) : null,
-          stock: stock != null ? Number(stock) : null,
-          status: status === 'inactive' ? 'inactive' : 'active',
-          brandId: brandId || null,
-          categoryId: categoryId || null,
-        },
-      });
-
-      res.status(201).json({ message: 'Tạo sản phẩm thành công!', data: product });
-    } catch (err: any) {
-      console.error(err);
-      if (err.code === 'P2002') return res.status(409).json({ message: 'Slug đã tồn tại' });
-      if (err.code === 'P2003') return res.status(400).json({ message: 'brandId hoặc categoryId sai' });
-      res.status(500).json({ message: 'Lỗi server' });
+    if (!name?.trim() || !slug?.trim() || price == null) {
+      return res.status(400).json({ message: 'Thiếu name, slug hoặc price' });
     }
-  });
+
+    const priceNum = Number(price);
+    if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ message: 'Price không hợp lệ' });
+
+    const product = await prisma.product.create({
+      data: {
+        name: name.trim(),
+        slug: slugify(slug, { lower: true, strict: true }),
+        description: description?.trim() || null,
+        price: priceNum,
+        discount: discount != null ? Number(discount) : null,
+        stock: stock != null ? Number(stock) : null,
+        status: status === 'inactive' ? 'inactive' : 'active',
+        brandId,
+        categoryId,
+      },
+    });
+
+    console.log("PRODUCT ĐÃ TẠO:", product.id);
+    console.log("IMAGES NHẬN ĐƯỢC:", req.body.images);
+    console.log("VARIANTS NHẬN ĐƯỢC:", req.body.variants);
+
+    // TẠO IMAGES – BÂY GIỜ SẼ CHẠY!!!
+    if (Array.isArray(images) && images.length > 0) {
+      await prisma.productImage.createMany({
+        data: images.map((img: any) => ({
+          productId: product.id,
+          imageUrl: img.imageUrl,
+          isPrimary: img.isPrimary ?? false,
+        })),
+      });
+    }
+
+    // TẠO VARIANTS – BÂY GIỜ SẼ CHẠY!!!
+    if (Array.isArray(variants) && variants.length > 0) {
+      await prisma.productVariant.createMany({
+        data: variants.map((v: any) => ({
+          productId: product.id,
+          color: v.color,
+          sizeId: v.sizeId,
+          stock: v.stock ?? 0,
+        })),
+      });
+    }
+
+    // Trả về product đầy đủ (tùy chọn)
+    const fullProduct = await prisma.product.findUnique({
+      where: { id: product.id },
+      include: { images: true, variants: { include: { size: true } } },
+    });
+
+    return res.status(201).json({
+      message: 'Tạo sản phẩm thành công!',
+      data: fullProduct || product,
+    });
+  } catch (err: any) {
+    console.error('Lỗi tạo product:', err);
+    if (err.code === 'P2002') return res.status(409).json({ message: 'Slug đã tồn tại' });
+    if (err.code === 'P2003') return res.status(400).json({ message: 'brandId hoặc categoryId không hợp lệ' });
+    return res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
 };
 
 // ─────────────────────────────────────────────────────────────

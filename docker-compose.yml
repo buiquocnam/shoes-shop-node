@@ -21,6 +21,7 @@ services:
     image: node:18
     container_name: auth-service
     working_dir: /app
+    env_file: D:\ecommerce\node\shoes-shop-node\.env
     volumes:
       - ./services/auth-service:/app
     environment:
@@ -63,6 +64,7 @@ services:
     image: node:18
     container_name: product-service
     working_dir: /app
+    env_file: D:\ecommerce\node\shoes-shop-node\.env
     volumes:
       - ./services/product-service:/app
     environment:
