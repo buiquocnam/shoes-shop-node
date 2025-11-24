@@ -40,7 +40,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const isAdmin = 
-      user.roleId === '00000000-0000-0000-0000-000000000001' || 
+      user.roleId === 'a855a300-39af-4f79-933a-986a4e657d7f' || 
       user.roleId === '00000000-0000-0000-0000-000000000002';
 
     const token = jwt.sign(

@@ -50,8 +50,8 @@ router.delete('/coupons/:id',authenticate, authorize(['ADMIN']), deleteCoupon);
 
 //Reviews
 router.get('/reviews', listReviews);
-router.post('/reviews', authenticate, createReview);
-router.delete('/reviews/:id', authenticate, deleteReview);
-router.put('/reviews/:id', authenticate, updateReview);
+// router.post('/reviews', authenticate, createReview);
+// router.delete('/reviews/:id', authenticate, deleteReview);
+// router.put('/reviews/:id', authenticate, updateReview);
 router.get('/reviews/product/:productId', getReviewsByProduct);
 export default router;
