@@ -1,5 +1,9 @@
 version: '3.8'
+
 services:
+  # =========================
+  # PostgreSQL
+  # =========================
   postgres:
     image: postgres:15
     container_name: postgres_db
@@ -11,21 +15,24 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck: # <<< THÊM HEALTHCHECK CHO POSTGRES
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # =========================
+  # Auth Service
+  # =========================
   auth-service:
     image: node:18
     container_name: auth-service
     working_dir: /app
-    env_file: D:\ecommerce\node\shoes-shop-node\.env
     volumes:
       - ./services/auth-service:/app
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/auth_db
     command: sh -c "chmod +x ./start-dev.sh && ./start-dev.sh"
     depends_on:
       postgres:
@@ -33,14 +40,17 @@ services:
     ports:
       - "3001:3001"
 
-  order-service:
+  # =========================
+  # Product Service
+  # =========================
+  product-service:
     image: node:18
-    container_name: order-service
+    container_name: product-service
     working_dir: /app
     volumes:
-      - ./services/order-service:/app
+      - ./services/product-service:/app
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/product_db
     command: sh -c "chmod +x ./start-dev.sh && ./start-dev.sh"
     depends_on:
       postgres:
@@ -48,33 +58,66 @@ services:
     ports:
       - "3002:3002"
 
-  migrate:
+  # =========================
+  # Order Service
+  # =========================
+  order-service:
     image: node:18
+    container_name: order-service
     working_dir: /app
     volumes:
-      - .:/app
+      - ./services/order-service:/app
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
-    command: npx prisma migrate deploy
-    depends_on:
-      postgres:
-        condition: service_healthy
-        
-  product-service:
-    image: node:18
-    container_name: product-service
-    working_dir: /app
-    env_file: D:\ecommerce\node\shoes-shop-node\.env
-    volumes:
-      - ./services/product-service:/app
-    environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/postgres
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/order_db
     command: sh -c "chmod +x ./start-dev.sh && ./start-dev.sh"
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "3004:3004"
+      - "3003:3003"
+
+  # =========================
+  # Prisma Migrate cho từng service
+  # =========================
+  migrate-auth:
+    image: node:18
+    working_dir: /app
+    volumes:
+      - ./services/auth-service:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/auth_db
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-product:
+    image: node:18
+    working_dir: /app
+    volumes:
+      - ./services/product-service:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/product_db
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-order:
+    image: node:18
+    working_dir: /app
+    volumes:
+      - ./services/order-service:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/order_db
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # =========================
+  # Gateway
+  # =========================
   gateway:
     image: node:18
     container_name: gateway
@@ -84,8 +127,8 @@ services:
     command: sh -c "npm install && npm run build && npm run start"
     depends_on:
       - auth-service
-      - order-service
       - product-service
+      - order-service
     ports:
       - "3000:3000"
 

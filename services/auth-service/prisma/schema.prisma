@@ -1,51 +1,35 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// Đảm bảo DATABASE_URL trong .env là PostgreSQL
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ===================================
-// 👥 AUTH SERVICE MODELS (SỬ DỤNG UUID CHO ID)
-// ===================================
-
-// =============== ROLES ===============
 model Role {
-  // Sửa: Sử dụng UUID làm kiểu ID cho String
-  id    String @id @default(uuid()) 
-  name  String @unique
-  
-  // Mối quan hệ: Một Role có nhiều User
-  users User[]
+  id    String  @id @default(uuid())
+  name  String  @unique
 
+  users User[]
   @@map("roles")
 }
 
-// =============== USERS ===============
 model User {
-  // Sửa: Sử dụng UUID làm kiểu ID cho String
-  id        String   @id @default(uuid()) 
-  
-  // Khóa ngoại tới Role (Mối quan hệ 1-n)
-  // Sửa: Bỏ @db.ObjectId
-  role_id   String?  @map("role_id")
-  role      Role?    @relation(fields: [role_id], references: [id])
-  
+  id        String   @id @default(uuid())
+
   email     String   @unique
   name      String
-  password  String   // Lưu Hash của mật khẩu
-  
+  password  String
   phone     String?
   address   String?
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  roleId    String?  @map("role_id")
+  role      Role?    @relation(fields: [roleId], references: [id])
 
-  @@map("users")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  // Không map quan hệ cross-service thật sự (Order/Review)
+  // Vì AUTH không quản lý bảng Order/Review
 }

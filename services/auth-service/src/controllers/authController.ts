@@ -26,7 +26,7 @@ export const login = async (req: Request, res: Response) => {
         email: true,
         name: true,
         password: true,
-        role_id: true,
+        roleId: true,
       }
     });
 
@@ -40,14 +40,14 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const isAdmin = 
-      user.role_id === '00000000-0000-0000-0000-000000000001' || 
-      user.role_id === '00000000-0000-0000-0000-000000000002';
+      user.roleId === '00000000-0000-0000-0000-000000000001' || 
+      user.roleId === '00000000-0000-0000-0000-000000000002';
 
     const token = jwt.sign(
       {
         userId: user.id,           // hoặc id: user.id tùy bạn
         email: user.email,
-        roleId: user.role_id,      // giữ lại để tương thích cũ
+        roleId: user.roleId,      // giữ lại để tương thích cũ
         role: isAdmin ? 'ADMIN' : 'CUSTOMER',  // ← CÁI NÀY LÀM NÊN TẤT CẢ!!!
       },
       JWT_SECRET,
@@ -61,7 +61,7 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role_id: user.role_id,
+        roleId: user.roleId,
       }
     });
   } catch (err) {
@@ -96,13 +96,13 @@ export const register = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 2. Tạo User và gán role_id
+    // 2. Tạo User và gán roleId
     const user = await prisma.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
-        role_id: customerRole.id,
+        roleId: customerRole.id,
       },
       select: {
         id: true,
@@ -111,7 +111,7 @@ export const register = async (req: Request, res: Response) => {
         // ⚠️ SỬA LỖI: Loại bỏ hoàn toàn 'createdAt: true' khỏi select
         // Prisma sẽ tự động thêm các trường không select vào kết quả trả về
         // nếu chúng không phải là trường quan hệ.
-        role_id: true,
+        roleId: true,
       }
     });
 
@@ -124,7 +124,7 @@ export const register = async (req: Request, res: Response) => {
             id: user.id,
             email: user.email,
             name: user.name,
-            role_id: user.role_id,
+            roleId: user.roleId,
             // Nếu bạn muốn trả về createdAt, thử truy cập user.createdAt, 
             // nếu vẫn lỗi, hãy bỏ qua nó trong response.
         }

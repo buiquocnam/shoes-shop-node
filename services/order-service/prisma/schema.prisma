@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===================================
-// 📦 ORDER SERVICE MODELS (Using UUID)
-// ===================================
-
 enum PaymentMethod {
   cod
   momo
@@ -54,89 +50,69 @@ enum PaymentState {
   failed
 }
 
-// =============== CARTS ===============
-model Cart {
-  id        String   @id @default(uuid())
-  // 💡 CHỈ LÀ KHÓA NGOẠI: Bỏ @relation vì User thuộc Auth Service
-  userId    String   @map("user_id") 
-  createdAt DateTime @default(now()) @map("created_at")
-  items     CartItem[]
-
-  @@map("carts")
-}
-
-// =============== CART ITEMS ===============
-model CartItem {
-  id                 String @id @default(uuid())
-  cartId             String @map("cart_id")
-  cart               Cart   @relation(fields: [cartId], references: [id])
-  // 💡 CHỈ LÀ KHÓA NGOẠI: Bỏ @relation vì ProductVariant thuộc Product Service
-  productVariantId   String @map("product_variant_id") 
-  quantity           Int    @default(1)
-
-  @@map("cart_items")
-}
-
-// =============== ORDERS ===============
 model Order {
-  id              String          @id @default(uuid())
-  // 💡 CHỈ LÀ KHÓA NGOẠI: Bỏ @relation vì User thuộc Auth Service
-  userId          String          @map("user_id") 
-  totalAmount     Decimal         @db.Decimal(12,2) @map("total_amount")
-  paymentMethod   PaymentMethod?  @map("payment_method")
-  paymentStatus   PaymentStatus?  @map("payment_status")
-  shippingMethod  ShippingMethod? @map("shipping_method")
-  shippingFee     Decimal?        @db.Decimal(12,2) @map("shipping_fee")
-  shippingStatus  ShippingStatus? @map("shipping_status")
-  trackingCode    String?         @map("tracking_code")
-  shippingAddress String          @map("shipping_address")
-  receiverName    String?         @map("receiver_name")
-  receiverPhone   String?         @map("receiver_phone")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
   
-  items           OrderItem[]
-  payments        Payment[]
-  shippingLogs    ShippingLog[]
+  // CHỈ LƯU userId, không relation
+  userId          String
+  
+  totalAmount     Decimal   @db.Decimal(12,2)
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus?   @default(pending)
+  shippingMethod  ShippingMethod?
+  shippingFee     Decimal?  @db.Decimal(12,2)
+  shippingStatus  ShippingStatus?  @default(pending)
+  trackingCode    String?
+  shippingAddress String
+  receiverName    String?
+  receiverPhone   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items        OrderItem[]
+  payments     Payment[]
+  shippingLogs ShippingLog[]
 
   @@map("orders")
 }
 
-// =============== ORDER ITEMS ===============
 model OrderItem {
-  id                 String  @id @default(uuid())
-  orderId            String  @map("order_id")
-  order              Order   @relation(fields: [orderId], references: [id])
-  // 💡 CHỈ LÀ KHÓA NGOẠI: Bỏ @relation vì ProductVariant thuộc Product Service
-  productVariantId   String  @map("product_variant_id") 
-  quantity           Int     @default(1)
-  price              Decimal @db.Decimal(12,2)
+  id    String  @id @default(uuid())
+
+  orderId String
+  order   Order @relation(fields: [orderId], references: [id])
+  
+  // CHỈ LƯU productVariantId, không relation
+  productVariantId String
+
+  quantity Int
+  price    Decimal @db.Decimal(12,2)
 
   @@map("order_items")
 }
 
-// =============== SHIPPING LOGS ===============
 model ShippingLog {
   id        String          @id @default(uuid())
-  orderId   String          @map("order_id")
+  orderId   String
   order     Order           @relation(fields: [orderId], references: [id])
-  status    ShippingLogStatus @map("status")
+  
+  status    ShippingLogStatus
   note      String?
-  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at")
+  updatedAt DateTime        @default(now()) @updatedAt
 
   @@map("shipping_logs")
 }
 
-// =============== PAYMENTS ===============
 model Payment {
-  id            String        @id @default(uuid())
-  orderId       String        @map("order_id")
-  order         Order         @relation(fields: [orderId], references: [id])
-  amount        Decimal       @db.Decimal(12,2)
+  id            String      @id @default(uuid())
+  orderId       String
+  order         Order       @relation(fields: [orderId], references: [id])
+  amount        Decimal     @db.Decimal(12,2)
   method        PaymentMethod
   status        PaymentState
-  transactionId String?       @map("transaction_id")
-  createdAt     DateTime      @default(now()) @map("created_at")
+  transactionId String?
+  createdAt     DateTime    @default(now())
 
   @@map("payments")
 }
