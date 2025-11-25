@@ -56,7 +56,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3002:3002"
+      - "3004:3004"
 
   # =========================
   # Order Service
@@ -67,8 +67,10 @@ services:
     working_dir: /app
     volumes:
       - ./services/order-service:/app
-    environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/order_db
+    # environment:
+    #   DATABASE_URL: postgresql://postgres:password@postgres:5432/order_db
+    env_file:
+    - ./services/order-service/.env
     command: sh -c "chmod +x ./start-dev.sh && ./start-dev.sh"
     depends_on:
       postgres:
