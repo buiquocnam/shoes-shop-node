@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,13 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  password String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Role {
+  id    String  @id @default(uuid())
+  name  String  @unique
 
-  @@map("users")
+  users User[]
+  @@map("roles")
+}
+
+model User {
+  id        String   @id @default(uuid())
+
+  email     String   @unique
+  name      String
+  password  String
+  phone     String?
+  address   String?
+
+  roleId    String?  @map("role_id")
+  role      Role?    @relation(fields: [roleId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  // Không map quan hệ cross-service thật sự (Order/Review)
+  // Vì AUTH không quản lý bảng Order/Review
 }
