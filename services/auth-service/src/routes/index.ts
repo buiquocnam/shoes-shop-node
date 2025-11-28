@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router } from "express";
+import { login, register } from "../controllers/authController";
+import { validateLogin, validateRegister } from "../middlewares/validation";
 
 const router = Router();
 
-router.post('/login', (req, res) => {
-  res.json({ token: 'fake-token' });
-});
+router.post("/login", validateLogin, login);
+router.post("/register", validateRegister, register);
 
 export default router;
