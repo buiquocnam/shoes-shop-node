@@ -8,15 +8,13 @@
   ],
   "scripts": {
     "install:all": "npm install --workspaces",
+    
     "dev": "npm-run-all --parallel --continue-on-error dev:*",
     "dev:auth": "npm --workspace services/auth-service run dev",
-    "dev:order": "npm --workspace services/order-service run dev",
-    "dev:user": "npm --workspace services/user-service run dev",
     "dev:gateway": "npm --workspace gateway run dev",
+
     "build": "npm run build:auth && npm run build:order && npm run build:user && npm run build:gateway",
     "build:auth": "npm --workspace services/auth-service run build",
-    "build:order": "npm --workspace services/order-service run build",
-    "build:user": "npm --workspace services/user-service run build",
     "build:gateway": "npm --workspace gateway run build"
   },
   "devDependencies": {
