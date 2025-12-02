@@ -49,3 +49,15 @@ export const validateRegister = (
 
   next();
 };
+
+export const validateLogout = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { refresh_token } = req.body;
+  if (!refresh_token) {
+    throw createError.BadRequest("Refresh token is required for logout");
+  }
+  next();
+};  
