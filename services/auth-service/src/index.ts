@@ -60,3 +60,11 @@ app.listen(3001, () => {
   console.log("Auth service listening on http://localhost:3001");
 });
 
+// Thêm 2 dòng này vào cuối file
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! Container will NOT crash:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION! Container will NOT crash:', reason);
+});
