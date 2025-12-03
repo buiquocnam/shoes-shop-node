@@ -89,13 +89,33 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: mongodb://root:abc123456@mongodb:27017/cloud?authSource=admin
+      DATABASE_URL: mongodb://root:abc123456@mongodb:27017/auth_db?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: supersecret
     depends_on:
       - mongodb
       - redis
+    networks:
+      - shoes-shop
+
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    restart: always
+    ports:
+      - "3004:3004"
+    environment:
+      DATABASE_URL: mongodb://root:abc123456@mongodb:27017/product_db?authSource=admin
+      KAFKA_BROKER: kafka:9092
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+    depends_on:
+      - mongodb
+      - kafka
+      - minio
     networks:
       - shoes-shop
 
