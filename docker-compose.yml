@@ -107,6 +107,7 @@ services:
       - "3004:3004"
     environment:
       DATABASE_URL: mongodb://root:abc123456@mongodb:27017/product_db?authSource=admin
+      JWT_SECRET: supersecret
       KAFKA_BROKER: kafka:9092
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000

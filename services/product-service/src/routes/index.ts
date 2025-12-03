@@ -5,9 +5,10 @@ import { getSizes, createSize, deleteSize, getSizeById } from "../controllers/si
 import { getProductVariants, createProductVariant, deleteProductVariant } from "../controllers/productVariantController";
 import { uploadProductImage, getProductImages, deleteProductImage  } from "../controllers/productImageController";
 import { getProductById, createProduct, updateProduct, deleteProduct, getProducts } from "../controllers/productController";
+import { getReviewsByProductId, createReview, deleteReview } from "../controllers/reviewController";
 import { upload } from "../middlewares/upload";
+import authMiddleware from "../middlewares/authMiddleware";
 import { get } from "http";
-
 
 const router = Router();
 
@@ -40,5 +41,9 @@ router.post("/products",createProduct);
 router.put("/products/:id",updateProduct);
 router.delete("/products/:id",deleteProduct);
 router.get("/products",getProducts);
+
+router.get("/reviews/product/:productId",getReviewsByProductId);
+router.post("/reviews", authMiddleware ,createReview);
+router.delete("/reviews/:id",deleteReview);
 
 export default router;

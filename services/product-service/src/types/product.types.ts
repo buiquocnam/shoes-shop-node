@@ -51,3 +51,10 @@ export interface ProductVariantDTO {
   sizeId?: Types.ObjectId;
   stock?: number;
 }
+
+export interface ReviewDTO {
+  product_id: Types.ObjectId;
+  user_id: Types.ObjectId;
+  rating: number;
+  comment?: string;
+}
