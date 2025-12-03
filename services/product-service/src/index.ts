@@ -1,6 +1,6 @@
 import express from "express";
-import authRoutes from "./routes";
-import connectDB from "./models";
+import brandRoutes from "./routes";
+import { connectDB } from "./models";
 import redis from "./config/redis";
 
 const app = express();
@@ -25,10 +25,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Health check
-app.get("/health", (req, res) => res.json({ status: "auth service ok" }));
+app.get("/health", (req, res) => res.json({ status: "product service ok" }));
 
 // Auth routes - gateway will rewrite /auth to "", so routes should be at root
-app.use("/", authRoutes);
+app.use("/", brandRoutes);
 
 // Error handler middleware (must be last)
 app.use(
@@ -56,8 +56,8 @@ connectDB();
 
 // Redis is already connected via import (singleton pattern)
 
-app.listen(3001, () => {
-  console.log("Auth service listening on http://localhost:3001");
+app.listen(3004, () => {
+  console.log("Auth service listening on http://localhost:3004");
 });
 
 // Thêm 2 dòng này vào cuối file

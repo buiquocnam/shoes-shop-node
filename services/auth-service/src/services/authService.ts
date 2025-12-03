@@ -11,39 +11,46 @@ import createError from "http-errors";
 
 export class AuthService {
   async login(loginData: LoginDTO): Promise<AuthResponse> {
-    const { email, password } = loginData;
+    try {
+      const { email, password } = loginData;
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      throw createError.NotFound("User not found");
-    }
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        throw createError.NotFound("User not found");
+      }
 
-    const isPasswordValid = await comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      throw createError.Unauthorized("Invalid email or password");
-    }
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        throw createError.Unauthorized("Invalid email or password");
+      }
 
-    const accessToken = generateAccessToken({
-      userId: user.id,
-      email: user.email,
-    });
-    const refreshToken = await generateRefreshToken({
-      userId: user.id,
-      email: user.email,
-    });
-
-    await redisService.setRefreshToken(user.id, refreshToken);
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
+      const accessToken = generateAccessToken({
+        userId: user.id,
         email: user.email,
-        name: user.name || null,
-      },
-    };
+      });
+
+      const refreshToken = generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+      });
+
+      await redisService.setRefreshToken(user.id, refreshToken);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name || null,
+        },
+      };
+    } catch (err: any) {
+      throw createError(err.status || 500, err.message || "Login failed");
+    }
   }
+
+
   async register(registerData: RegisterDTO): Promise<AuthResponse> {
     const { email, password, name } = registerData;
 
@@ -63,7 +70,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
     });
-    const refreshToken = await generateRefreshToken({
+    const refreshToken = generateRefreshToken({
       userId: user.id,
       email: user.email,
     });
@@ -111,5 +118,14 @@ export class AuthService {
       },
     };
   }
+
+  async logout(userId: string, token: string): Promise<void> {
+    if(!token) {
+      throw createError.BadRequest("Refresh token is required for logout");
+    }
+
+    
+  }
+
 }
 export default new AuthService();
