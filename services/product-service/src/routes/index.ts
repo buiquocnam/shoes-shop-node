@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getBrands, createBrand, updateBrand, deleteBrand, getBrandById } from "../controllers/brandController";
 import { getCategories, createCategory, deleteCategory, getCategoryById } from "../controllers/categoryController";
 import { getSizes, createSize, deleteSize, getSizeById } from "../controllers/sizeController";
-import { getProductVariants, createProductVariant, deleteProductVariant } from "../controllers/productVariantController";
+import { createProductVariant, deleteProductVariant, getProductVariantById } from "../controllers/productVariantController";
 import { uploadProductImage, getProductImages, deleteProductImage  } from "../controllers/productImageController";
 import { getProductById, createProduct, updateProduct, deleteProduct, getProducts } from "../controllers/productController";
 import { getReviewsByProductId, createReview, deleteReview } from "../controllers/reviewController";
@@ -28,7 +28,7 @@ router.get("/sizes/:id",getSizeById);
 router.post("/sizes",createSize);
 router.delete("/sizes/:id",deleteSize);
 
-router.get("/product-variants",getProductVariants);
+router.get("/product-variants/:variant_id",getProductVariantById);
 router.post("/product-variants",createProductVariant);
 router.delete("/product-variants/:id",deleteProductVariant);
 

@@ -5,14 +5,6 @@ import mongoose from "mongoose";
 // Load environment variables
 dotenv.config();
 
-import Brand from "./Brand";
-import Category from "./Category";
-import Product from "./Product";
-import ProductImage from "./ProductImage";
-import ProductVariant from "./ProductVariant";
-import Size from "./Size";
-import Review from "./Review";
-
 // Connect to MongoDB
 const connectDB = async (): Promise<void> => {
   try {
@@ -29,15 +21,7 @@ const connectDB = async (): Promise<void> => {
   }
 };
 
-// Export models để import dễ dàng trong các service khác
 export {
-  Brand,
-  Category,
-  Product,
-  ProductImage,
-  ProductVariant,
-  Size,
-  Review,
   connectDB,
 };
 

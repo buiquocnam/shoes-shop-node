@@ -16,14 +16,24 @@ export class productVariantService {
         }
     }
 
-    async getProductVariants(product_id: string) {
-        try {
-            const variants = await ProductVariant.find({ product_id });
-            return variants;
-        } catch (err: any) {
-            throw createError(err.status || 500, err.message || "Get product variants failed");
+    async getProductVariantById(variant_id: string) {
+    try {
+        if (!variant_id) {
+            throw new createError.BadRequest("variant_id is required");
         }
+
+        // Lấy variant và populate product để có price
+        const variant = await ProductVariant.findById(variant_id).populate('product_id');
+        if (!variant) {
+            throw new createError.NotFound("Product variant not found");
+        }
+
+        return variant;
+    } catch (err: any) {
+        throw createError(err.status || 500, err.message || "Get product variants failed");
     }
+}
+
 
     async deleteProductVariant(variantId: string) {
         try {

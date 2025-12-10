@@ -17,20 +17,18 @@ export const createProductVariant = async (
     }
 };
 
-export const getProductVariants = async (
+export const getProductVariantById = async (
     req: Request,
-    res: Response,  
+    res: Response,
     next: NextFunction
 ) => {
     try {
-        const productId = req.params.productId;
-        const result = await productVariant.getProductVariants(productId);
-        res.json(result);
+        const variant_id = req.params.variant_id; // đúng tên params
+        const result = await productVariant.getProductVariantById(variant_id);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
     }
-    catch (err) {
-        next(err);
-    }
-
 };
 
 export const deleteProductVariant = async (
