@@ -1,13 +1,12 @@
+version: '3.8'
+
 services:
   mongodb:
-    image: bitnami/mongodb:latest
+    image: mongo:latest
     container_name: mongodb
     environment:
-      - MONGODB_ROOT_PASSWORD=abc123456
-      - MONGODB_USERNAME=user
-      - MONGODB_PASSWORD=ad123456
-      - MONGODB_DATABASE=cloud
-
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: abc123456
     ports:
       - "27017:27017"
     volumes:
@@ -82,6 +81,64 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: mongodb://root:abc123456@mongodb:27017/auth_db?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: supersecret
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - shoes-shop
+
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    restart: always
+    ports:
+      - "3004:3004"
+    environment:
+      DATABASE_URL: mongodb://root:abc123456@mongodb:27017/product_db?authSource=admin
+      JWT_SECRET: supersecret
+      KAFKA_BROKER: kafka:9092
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+    depends_on:
+      - mongodb
+      - kafka
+      - minio
+    networks:
+      - shoes-shop
+
+  order-service:
+    build: ./services/order-service
+    container_name: order-service
+    restart: always
+    ports:
+      - "3003:3003"
+    environment:
+      DATABASE_URL: mongodb://root:abc123456@mongodb:27017/order_db?authSource=admin
+      MONGO_URI: mongodb://root:abc123456@mongodb:27017/order_db?authSource=admin
+      JWT_SECRET: supersecret
+      KAFKA_BROKER: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - mongodb
+      - kafka
+      - redis
+    networks:
+      - shoes-shop
 
 networks:
   shoes-shop:

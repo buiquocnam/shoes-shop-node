@@ -16,13 +16,13 @@ export interface TokenPayload {
 
 export const generateRefreshToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: parseInt(JWT_REFRESH_EXPIRATION),
+    expiresIn: Math.floor(parseInt(JWT_REFRESH_EXPIRATION) / 1000),
   });
 };
 
 export const generateAccessToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: parseInt(JWT_ACCESS_EXPIRATION),
+    expiresIn: Math.floor(parseInt(JWT_ACCESS_EXPIRATION) / 1000),
   });
 };
 
